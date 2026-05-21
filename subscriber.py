@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+import json
+import logging
+
 import paho.mqtt.client as mqtt
 
 # Subscriver settings
@@ -6,19 +9,42 @@ BROKER_HOST = "localhost"
 BROKER_PORT = 1883
 TOPIC = "iot/sensor/temperature"
 
+# Configure basic logging settings
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s: %(message)s",
+    handlers=[logging.FileHandler("./logs/subscriber.log"), logging.StreamHandler()],
+)
+
 
 def on_connect(client, userdata, flags, reason_code, properties=None):
     if reason_code == 0:
-        print("Connected to MQTT broker")
+        logging.info("Connected to MQTT broker")
         client.subscribe(TOPIC)
-        print(f"Subscribed to topic: {TOPIC}")
+        logging.info(f"Subscribed to topic: {TOPIC}")
     else:
-        print(f"Failed to connect. reason_code={reason_code}")
+        logging.error(f"Failed to connect. reason_code={reason_code}")
 
 
 def on_message(client, userdata, message):
-    payload = message.payload.decode("utf-8")
-    print(f"Received message: topic={message.topic}, payload={payload}")
+    try:
+        payload = message.payload.decode("utf-8")
+    except UnicodeDecodeError as e:
+        logging.error(f"Failed to decode payload: {e}")
+        return
+
+    try:
+        data = json.loads(payload)
+    except json.JSONDecodeError:
+        logging.warning(f"Invalid JSON received: {payload}")
+        return
+
+    logging.info(
+        f"Received data from {data['device_id']}: "
+        f"Temperature: {data['temperature']}, "
+        f"Humidity: {data['humidity']}, "
+        f"Time: {data['timestamp']}"
+    )
 
 
 def main():
