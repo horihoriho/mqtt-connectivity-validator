@@ -13,6 +13,7 @@ import paho.mqtt.client as mqtt
 BROKER_HOST = "localhost"
 BROKER_PORT = 1883
 TOPIC = "iot/sensor/temperature"
+PUBLISH_INTERVAL_SECONDS = 3
 
 Path("logs").mkdir(exist_ok=True)
 
@@ -55,29 +56,46 @@ def main():
     client.on_connect = on_connect
     client.on_disconnect = on_disconnect
 
-    client.connect(BROKER_HOST, BROKER_PORT, keepalive=60)
+    try:
+        client.connect(BROKER_HOST, BROKER_PORT, keepalive=60)
+    except ConnectionRefusedError as error:
+        logging.error(f"Failed to connect to MQTT broker: {error}")
+        return
+    except OSError as error:
+        logging.error(f"Network error while connecting to MQTT broker: {error}")
+        return
     client.loop_start()
 
     try:
         while True:
-            sensor_data = create_sensor_data()
-            payload = json.dumps(sensor_data)
+            try:
+                sensor_data = create_sensor_data()
+                payload = json.dumps(sensor_data)
+            except (TypeError, ValueError) as error:
+                logging.error(f"Failed to create JSON payload: {error}")
+                time.sleep(PUBLISH_INTERVAL_SECONDS)
+                continue
 
-            result = client.publish(TOPIC, payload)
+            try:
+                result = client.publish(TOPIC, payload)
+            except RuntimeError as error:
+                logging.error(f"Runtime error while publishing message: {error}")
+                time.sleep(PUBLISH_INTERVAL_SECONDS)
+                continue
 
             if result.rc == mqtt.MQTT_ERR_SUCCESS:
-                logging.info(f"Published: {payload}")
+                logging.info(f"Published message: {payload}")
             else:
                 logging.warning(f"Failed to publish message. result_code={result.rc}")
 
-            time.sleep(3)
+            time.sleep(PUBLISH_INTERVAL_SECONDS)
 
     except KeyboardInterrupt:
-        logging.info("\nPublisher stopped by user.")
+        logging.info("Publisher stopped by user.")
 
     finally:
-        client.loop_stop()
         client.disconnect()
+        client.loop_stop()
 
 
 if __name__ == "__main__":
