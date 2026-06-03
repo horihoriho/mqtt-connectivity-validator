@@ -118,6 +118,16 @@ The following cases were tested:
 | Publisher stopped with Ctrl + C | Publisher disconnects gracefully |
 | Broker stopped unexpectedly | Publisher and subscriber detect unexpected disconnection |
 
+## What I Learned
+
+Through this project,
+- How MQTT publisher, broker, and subscriber communication works
+- How to use Mosquitto as a local MQTT broker
+- How to publish and subscribe to MQTT topics using Python
+- How to send and receive JSON-formatted sensor data
+- How to validate received data and handle invalid messages
+- How to handle normal and unexpected MQTT disconnections
+- How to use Python logging for debugging and troubleshooting
 
 ## Future Improvements MQTT Connectivity Validator
 
